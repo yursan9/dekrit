@@ -205,3 +205,7 @@ library free of signal handling and exit-code policy.
 `App.Run` and `App.RunContext` log errors to stderr and return them. Map the
 returned error to a process exit code with `dekrit.ExitCode`. Returning
 `&dekrit.ExitError{Code: n, Err: err}` from a command sets a custom exit code.
+
+## License
+
+Released under the MIT License. See [LICENSE](LICENSE).
