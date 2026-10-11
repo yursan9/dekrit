@@ -1,6 +1,7 @@
 package dekrit_test
 
 import (
+	"context"
 	"time"
 
 	"github.com/yursan9/dekrit"
@@ -28,4 +29,15 @@ func Example() {
 	)
 	app.Command("serve", &serveCmd{})
 	_ = app.Run([]string{"serve", "--port", "9090", "config.yaml"})
+}
+
+// Example_runContext shows how to propagate a context to a command. In a real
+// program the context would come from signal.NotifyContext.
+func Example_runContext() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	app := dekrit.New("app")
+	app.Command("serve", &serveCmd{})
+	_ = app.RunContext(ctx, []string{"serve", "config.yaml"})
 }

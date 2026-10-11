@@ -1,6 +1,7 @@
 package dekrit
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -91,10 +92,22 @@ func (a *App) commandPrefix(name string) string {
 	return a.Name + " " + name
 }
 
-// Run parses args (typically os.Args[1:]) and dispatches to a subcommand.
+// Run parses args (typically os.Args[1:]) and dispatches to a subcommand. It
+// is equivalent to RunContext(context.Background(), args).
+func (a *App) Run(args []string) error {
+	return a.RunContext(context.Background(), args)
+}
+
+// RunContext is like Run but accepts a context.Context that is exposed to the
+// invoked command through Context. Use it to propagate cancellation and
+// deadlines, for example from signal.NotifyContext.
+//
 // Errors are logged to stderr and returned for the caller to map to an exit
 // code via ExitCode.
-func (a *App) Run(args []string) error {
+func (a *App) RunContext(ctx context.Context, args []string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	if a.err != nil {
 		return a.logError(a.err)
 	}
@@ -124,7 +137,7 @@ func (a *App) Run(args []string) error {
 	if c == nil {
 		return a.logError(fmt.Errorf("unknown command %q", args[0]))
 	}
-	return c.run(a, args[1:])
+	return c.run(a, ctx, args[1:])
 }
 
 func (a *App) logError(err error) error {

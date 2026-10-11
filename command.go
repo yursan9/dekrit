@@ -1,6 +1,7 @@
 package dekrit
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -14,8 +15,11 @@ type Command interface {
 	Run(ctx *Context) error
 }
 
-// Context carries per-invocation state to a command's Run method.
+// Context carries per-invocation state to a command's Run method. It embeds a
+// context.Context, so commands can select on ctx.Done() to react to
+// cancellation and deadlines.
 type Context struct {
+	context.Context
 	App    *App
 	Args   []string
 	Stdin  io.Reader
@@ -104,7 +108,7 @@ func newCommand(appName, name string, cmd Command) (*command, error) {
 	return c, nil
 }
 
-func (c *command) run(a *App, args []string) error {
+func (c *command) run(a *App, ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet(c.name, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	fs.Usage = func() {}
@@ -135,14 +139,18 @@ func (c *command) run(a *App, args []string) error {
 		return &ExitError{Code: 1, Err: err}
 	}
 
-	ctx := &Context{
-		App:    a,
-		Args:   fs.Args(),
-		Stdin:  a.Stdin,
-		Stdout: a.Stdout,
-		Stderr: a.Stderr,
+	if ctx == nil {
+		ctx = context.Background()
 	}
-	if err := c.cmd.Run(ctx); err != nil {
+	runCtx := &Context{
+		Context: ctx,
+		App:     a,
+		Args:    fs.Args(),
+		Stdin:   a.Stdin,
+		Stdout:  a.Stdout,
+		Stderr:  a.Stderr,
+	}
+	if err := c.cmd.Run(runCtx); err != nil {
 		return a.logError(err)
 	}
 	return nil

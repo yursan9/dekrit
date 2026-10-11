@@ -14,6 +14,7 @@ Dekrit uses only the standard library.
 - Struct tags to define flags, positional arguments, or environment variables
 - Shared configuration between subcommands via embedded structs
 - Explicit value precedence: CLI flag/positional > environment variable > default
+- `context.Context` support for cancellation and deadlines
 
 Planned (not yet implemented):
 
@@ -164,8 +165,43 @@ type cmd struct {
 Every command automatically responds to `-h` / `--help`. The app responds to
 `help`, `--help`, `version`, and `--version`.
 
+## Context and cancellation
+
+Every command receives a `*dekrit.Context` that embeds a `context.Context`, so
+it can react to cancellation and deadlines with `ctx.Done()`, `ctx.Err()`, and
+`ctx.Deadline()`.
+
+Pass your own context to `App.RunContext`; `App.Run` is shorthand for
+`RunContext(context.Background(), args)`. Signal handling is left to the caller
+so each program can choose its own policy. A typical `main` wires
+`signal.NotifyContext` to the app:
+
+```go
+func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	app := dekrit.New("app")
+	app.Command("serve", &serveCmd{})
+	if err := app.RunContext(ctx, os.Args[1:]); err != nil {
+		os.Exit(dekrit.ExitCode(err))
+	}
+}
+
+func (s *serveCmd) Run(ctx *dekrit.Context) error {
+	<-ctx.Done() // blocks until a signal cancels the context
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return s.server.Shutdown(shutdownCtx)
+}
+```
+
+The command owns its grace period (here via `http.Server.Shutdown`), keeping the
+library free of signal handling and exit-code policy.
+
 ## Error handling
 
-`App.Run` logs errors to stderr and returns them. Map the returned error to a
-process exit code with `dekrit.ExitCode`. Returning
+`App.Run` and `App.RunContext` log errors to stderr and return them. Map the
+returned error to a process exit code with `dekrit.ExitCode`. Returning
 `&dekrit.ExitError{Code: n, Err: err}` from a command sets a custom exit code.
