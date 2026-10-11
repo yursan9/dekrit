@@ -31,6 +31,7 @@ func TestRouting(t *testing.T) {
 func TestUnknownCommand(t *testing.T) {
 	a, _, errb, _ := newTestApp(t)
 	a.Command("echo", &echoCmd{})
+	a.Command("other", &echoCmd{})
 	err := a.Run([]string{"nope"})
 	if err == nil {
 		t.Fatal("expected error")

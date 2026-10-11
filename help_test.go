@@ -18,6 +18,7 @@ func TestAppHelp(t *testing.T) {
 	a, out, _, _ := newTestApp(t)
 	a = New("app", WithStdout(out), WithDescription("my tool"))
 	a.Command("server", &helpCmd{})
+	a.Command("other", &echoCmd{})
 	if err := a.Run([]string{"help"}); err != nil {
 		t.Fatalf("Run: %v", err)
 	}

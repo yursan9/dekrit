@@ -15,6 +15,7 @@ Dekrit uses only the standard library.
 - Shared configuration between subcommands via embedded structs
 - Explicit value precedence: CLI flag/positional > environment variable > default
 - `context.Context` support for cancellation and deadlines
+- Automatic default command for single-command apps
 
 Planned (not yet implemented):
 
@@ -164,6 +165,29 @@ type cmd struct {
 
 Every command automatically responds to `-h` / `--help`. The app responds to
 `help`, `--help`, `version`, and `--version`.
+
+## Default command
+
+When exactly **one** command is registered, it becomes the *default* command:
+it runs both when no subcommand is given and when the first argument is not a
+recognized subcommand. The default receives all arguments, so flags and
+positional arguments work without naming the command:
+
+```sh
+app                       # runs the command
+app --port 8080           # flag routed to the command
+app config.yaml           # positional routed to the command
+app run --port 8080       # explicit name still works
+```
+
+Help adapts to a single-command app: `app --help` shows the command's own flags
+and usage (`Usage: app [flags] ...`) instead of a command list, while
+`app run --help` keeps the command name.
+
+With two or more commands there is no default: a bare `app` prints help and an
+unrecognized first argument is reported as an unknown command. Registering a
+second command therefore changes bare invocation from running the command to
+printing help, which matches how multi-command tools behave.
 
 ## Context and cancellation
 

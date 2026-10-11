@@ -85,6 +85,15 @@ func (a *App) find(name string) *command {
 	return nil
 }
 
+// defaultCommand returns the command that runs when no subcommand is selected.
+// A lone command is treated as the default; otherwise there is none.
+func (a *App) defaultCommand() *command {
+	if len(a.commands) == 1 {
+		return a.commands[0]
+	}
+	return nil
+}
+
 func (a *App) commandPrefix(name string) string {
 	if a.Name == "" {
 		return name
@@ -113,6 +122,9 @@ func (a *App) RunContext(ctx context.Context, args []string) error {
 	}
 
 	if len(args) == 0 {
+		if d := a.defaultCommand(); d != nil {
+			return d.run(a, ctx, nil)
+		}
 		a.writeHelp(a.Stdout)
 		return nil
 	}
@@ -121,7 +133,7 @@ func (a *App) RunContext(ctx context.Context, args []string) error {
 	case "help", "-h", "--help", "-help":
 		if len(args) > 1 {
 			if c := a.find(args[1]); c != nil {
-				c.writeHelp(a.Stdout, a)
+				c.writeHelp(a.Stdout, a, false)
 				return nil
 			}
 			return a.logError(fmt.Errorf("unknown command %q", args[1]))
@@ -133,11 +145,13 @@ func (a *App) RunContext(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	c := a.find(args[0])
-	if c == nil {
-		return a.logError(fmt.Errorf("unknown command %q", args[0]))
+	if c := a.find(args[0]); c != nil {
+		return c.run(a, ctx, args[1:])
 	}
-	return c.run(a, ctx, args[1:])
+	if d := a.defaultCommand(); d != nil {
+		return d.run(a, ctx, args)
+	}
+	return a.logError(fmt.Errorf("unknown command %q", args[0]))
 }
 
 func (a *App) logError(err error) error {

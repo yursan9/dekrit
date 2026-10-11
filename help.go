@@ -45,6 +45,11 @@ func typeName(t reflect.Type) string {
 }
 
 func (a *App) writeHelp(w io.Writer) {
+	if len(a.commands) == 1 {
+		a.commands[0].writeHelp(w, a, true)
+		return
+	}
+
 	name := a.Name
 	if name == "" {
 		name = "app"
@@ -78,8 +83,14 @@ func (a *App) writeHelp(w io.Writer) {
 	}
 }
 
-func (c *command) writeHelp(w io.Writer, a *App) {
+// writeHelp renders a command's help. asRoot is true when the help represents
+// the application itself (a single-command app invoked without a subcommand),
+// in which case the program label is the app name rather than "app <command>".
+func (c *command) writeHelp(w io.Writer, a *App, asRoot bool) {
 	usage := a.commandPrefix(c.name)
+	if asRoot {
+		usage = a.Name
+	}
 	if d, ok := c.cmd.(Describer); ok {
 		if s := d.Describe(); s != "" {
 			fmt.Fprintf(w, "%s\n\n", s)

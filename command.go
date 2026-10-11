@@ -136,7 +136,7 @@ func (c *command) run(a *App, ctx context.Context, args []string) error {
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			c.writeHelp(a.Stdout, a)
+			c.writeHelp(a.Stdout, a, false)
 			return nil
 		}
 		fmt.Fprintf(a.Stderr, "%s: %v\n", a.commandPrefix(c.name), err)
