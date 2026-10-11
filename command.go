@@ -27,7 +27,13 @@ type Context struct {
 	Stderr io.Writer
 }
 
-// ExitError wraps an error with a process exit code.
+// ExitCoder is implemented by errors that carry a process exit code. Any error
+// returned by a command may implement it to control the exit code.
+type ExitCoder interface {
+	ExitCode() int
+}
+
+// ExitError wraps an error with a process exit code. It implements ExitCoder.
 type ExitError struct {
 	Code int
 	Err  error
@@ -42,14 +48,18 @@ func (e *ExitError) Error() string {
 
 func (e *ExitError) Unwrap() error { return e.Err }
 
-// ExitCode reports the exit code associated with err, defaulting to 1.
+// ExitCode returns the exit code carried by the error, if any.
+func (e *ExitError) ExitCode() int { return e.Code }
+
+// ExitCode reports the exit code associated with err, defaulting to 1. An
+// error implementing ExitCoder takes precedence.
 func ExitCode(err error) int {
 	if err == nil {
 		return 0
 	}
-	var ee *ExitError
-	if errors.As(err, &ee) {
-		return ee.Code
+	var coder ExitCoder
+	if errors.As(err, &coder) {
+		return coder.ExitCode()
 	}
 	return 1
 }

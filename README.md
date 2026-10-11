@@ -203,8 +203,20 @@ library free of signal handling and exit-code policy.
 ## Error handling
 
 `App.Run` and `App.RunContext` log errors to stderr and return them. Map the
-returned error to a process exit code with `dekrit.ExitCode`. Returning
-`&dekrit.ExitError{Code: n, Err: err}` from a command sets a custom exit code.
+returned error to a process exit code with `dekrit.ExitCode`.
+
+A command controls its exit code by returning an error that implements
+`dekrit.ExitCoder`:
+
+```go
+type ExitCoder interface {
+	ExitCode() int
+}
+```
+
+`dekrit.ExitError{Code: n, Err: err}` is the built-in implementation, but any
+error type (including wrapped ones) with an `ExitCode() int` method is honored.
+Errors without one map to exit code 1.
 
 ## License
 
