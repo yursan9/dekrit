@@ -16,11 +16,8 @@ Dekrit uses only the standard library.
 - Explicit value precedence: CLI flag/positional > environment variable > default
 - `context.Context` support for cancellation and deadlines
 - Automatic default command for single-command apps
-
-Planned (not yet implemented):
-
-- Helpers to pretty print a struct as JSON or a tab based table
-- Helpers to create loading progress with a loading bar or spinner
+- `dekrit/output`: JSON, tables, styled text, progress bars, and spinners
+- `dekrit/input`: interactive prompts for confirmation, text, passwords, and selections
 
 ## Install
 
@@ -241,6 +238,64 @@ type ExitCoder interface {
 `dekrit.ExitError{Code: n, Err: err}` is the built-in implementation, but any
 error type (including wrapped ones) with an `ExitCode() int` method is honored.
 Errors without one map to exit code 1.
+
+## Input and output
+
+Two sub packages provide common terminal helpers. Both are optional and do not
+depend on the root package.
+
+### `dekrit/output`
+
+```go
+import "github.com/yursan9/dekrit/output"
+
+// Indented JSON.
+output.JSON(ctx.Stdout, result)
+
+// An aligned table from structs. Headers come from field names; override with
+// a col:"..." tag and exclude a field with col:"-".
+output.PrintTable(ctx.Stdout, []row{
+	{Name: "alice", Age: 30},
+	{Name: "bob", Age: 5},
+})
+
+// ...or build a table row by row.
+t := output.NewTable("NAME", "AGE")
+t.AddRow("alice", 30)
+t.Write(ctx.Stdout)
+
+// Progress bar and spinner (animated only on a terminal). Both default to
+// os.Stdout; use WithWriter and WithPrefix to customize.
+p := output.NewProgress(output.WithWriter(ctx.Stdout), output.WithPrefix("Downloading"))
+p.SetTotal(100)
+p.Start()
+p.Add(1)
+p.Finish()
+
+sp := output.NewSpinner(output.WithWriter(ctx.Stdout), output.WithPrefix("Uploading"))
+sp.Start("file.txt")
+sp.Success("done") // or sp.Fail("boom") / sp.Stop()
+
+// Styled text; Fprint disables styling when the writer is not a terminal.
+output.Fprintf(ctx.Stdout, output.FgGreen, "ok %d\n", n)
+```
+
+### `dekrit/input`
+
+```go
+import "github.com/yursan9/dekrit/input"
+
+p := input.New(input.WithInput(ctx.Stdin), input.WithOutput(ctx.Stdout))
+
+ok, err := p.Confirm("overwrite?", false)
+name, err := p.Text("name:")
+host, err := p.TextDefault("host:", "localhost")
+secret, err := p.Password("password:") // hidden on a terminal
+idx, err := p.Select("pick one", []string{"a", "b", "c"})
+```
+
+Package-level convenience functions (`input.Confirm`, `input.Text`, etc.) use
+`os.Stdin` and `os.Stdout`.
 
 ## License
 
