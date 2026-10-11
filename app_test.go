@@ -77,6 +77,15 @@ type hCmd struct {
 
 func (h *hCmd) Run(*Context) error { return nil }
 
+func TestDuplicateCommand(t *testing.T) {
+	a, _, _, _ := newTestApp(t)
+	a.Command("echo", &echoCmd{})
+	a.Command("echo", &echoCmd{})
+	if err := a.Run([]string{"echo", "hi"}); err == nil {
+		t.Fatal("expected duplicate command error")
+	}
+}
+
 func TestReservedFlag(t *testing.T) {
 	a, _, _, _ := newTestApp(t)
 	a.Command("x", &hCmd{})

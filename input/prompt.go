@@ -1,7 +1,6 @@
 package input
 
 import (
-	"bufio"
 	"io"
 	"os"
 	"strings"
@@ -11,8 +10,6 @@ import (
 type Prompter struct {
 	In  io.Reader
 	Out io.Writer
-
-	reader *bufio.Reader
 }
 
 // Option customizes a Prompter.
@@ -46,18 +43,27 @@ func New(opts ...Option) *Prompter {
 	return p
 }
 
-// line reads a single line, trimming the trailing newline. A partial line at
-// EOF is returned without error.
+// line reads a single line without consuming any input beyond it, so multiple
+// prompts can safely share the same reader (including non-interactive pipes).
+// A partial line at EOF is returned without error.
 func (p *Prompter) line() (string, error) {
-	if p.reader == nil {
-		p.reader = bufio.NewReader(p.In)
+	var sb strings.Builder
+	buf := make([]byte, 1)
+	for {
+		n, err := p.In.Read(buf)
+		if n > 0 {
+			if buf[0] == '\n' {
+				return strings.TrimRight(sb.String(), "\r"), nil
+			}
+			sb.WriteByte(buf[0])
+		}
+		if err != nil {
+			if sb.Len() == 0 {
+				return "", err
+			}
+			return strings.TrimRight(sb.String(), "\r"), nil
+		}
 	}
-	s, err := p.reader.ReadString('\n')
-	s = strings.TrimRight(s, "\r\n")
-	if err != nil && s == "" {
-		return "", err
-	}
-	return s, nil
 }
 
 // Confirm asks a yes/no question. An empty answer returns def.

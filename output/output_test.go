@@ -69,6 +69,19 @@ func TestPrintTableStruct(t *testing.T) {
 	}
 }
 
+func TestPrintTableEmptySliceHeaders(t *testing.T) {
+	var buf bytes.Buffer
+	if err := PrintTable(&buf, []itemRow{}); err != nil {
+		t.Fatalf("PrintTable: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{"ID", "Title", "Years"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("empty table missing header %q\n%q", want, out)
+		}
+	}
+}
+
 func TestPrintTableErrors(t *testing.T) {
 	var buf bytes.Buffer
 	if err := PrintTable(&buf, 42); err == nil {

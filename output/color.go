@@ -14,8 +14,9 @@ type Style struct {
 	code string
 }
 
-// Sprint renders a followed by the reset sequence, or plain text when color
-// output is disabled.
+// Sprint formats its arguments with fmt.Sprint and wraps them in the style's
+// ANSI sequence followed by a reset, or returns plain text when color output
+// is disabled.
 func (s Style) Sprint(a ...any) string {
 	str := fmt.Sprint(a...)
 	if NoColor || s.code == "" {

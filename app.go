@@ -67,6 +67,10 @@ func (a *App) Command(name string, cmd Command) *App {
 	if a.err != nil {
 		return a
 	}
+	if a.find(name) != nil {
+		a.err = fmt.Errorf("command %q already registered", name)
+		return a
+	}
 	c, err := newCommand(a.Name, name, cmd)
 	if err != nil {
 		a.err = err

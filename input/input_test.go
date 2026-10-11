@@ -81,6 +81,17 @@ func TestText(t *testing.T) {
 	}
 }
 
+func TestLineReaderDoesNotOverread(t *testing.T) {
+	// Two independent Prompters sharing one reader must each consume exactly
+	// one line; a buffered reader would swallow the second line.
+	r := strings.NewReader("first\nsecond\n")
+	a, _ := New(WithInput(r)).Text("a:")
+	b, _ := New(WithInput(r)).Text("b:")
+	if a != "first" || b != "second" {
+		t.Fatalf("got %q, %q; want first, second", a, b)
+	}
+}
+
 func TestTextDefault(t *testing.T) {
 	p, _ := newTest("\n")
 	got, err := p.TextDefault("name:", "anon")

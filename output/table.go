@@ -77,7 +77,24 @@ func PrintTable(w io.Writer, v any) error {
 			return err
 		}
 	}
+	if len(t.rows) == 0 {
+		t.headers = typeHeaders(rv.Type().Elem())
+	}
 	return t.Write(w)
+}
+
+// typeHeaders derives column headers from a struct type, used when a slice has
+// no rows to inspect.
+func typeHeaders(t reflect.Type) []string {
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return nil
+	}
+	var cols, headers []string
+	_ = collectRow(reflect.New(t).Elem(), &cols, &headers)
+	return headers
 }
 
 func collectRow(rv reflect.Value, cols, headers *[]string) error {
